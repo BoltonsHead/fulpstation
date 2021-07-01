@@ -1,16 +1,13 @@
 /datum/action/bloodsucker/cloak
 	name = "Cloak of Darkness"
-	desc = "Blend into the shadows and become invisible to the untrained eye. Movement is slowed in brightly lit areas, and you cannot dissapear while mortals watch you."
+	desc = "Blend into the shadows and become invisible to the untrained and Artificial eye. Slows you down and you cannot dissapear while mortals watch you."
 	button_icon_state = "power_cloak"
 	bloodcost = 5
 	cooldown = 50
 	bloodsucker_can_buy = TRUE
 	amToggle = TRUE
 	warn_constant_cost = TRUE
-	var/moveintent_was_run
-	var/runintent
-	var/walk_threshold = 0.4 // arbitrary number, to be changed, this is fine after testing on box station for a bit (Last edit: 2019)
-	var/lum
+	var/was_running
 
 /// Must have nobody around to see the cloak
 /datum/action/bloodsucker/cloak/CheckCanUse(display_error)
@@ -18,52 +15,46 @@
 	if(!.)
 		return
 	for(var/mob/living/M in viewers(9, owner) - owner)
-		to_chat(owner, "<span class='warning'>You may only vanish into the shadows unseen.</span>")
+		to_chat(owner, span_warning("You may only vanish into the shadows unseen."))
 		return FALSE
 	return TRUE
 
-/datum/action/bloodsucker/cloak/ActivatePower()
-	var/datum/antagonist/bloodsucker/bloodsuckerdatum = owner.mind.has_antag_datum(/datum/antagonist/bloodsucker)
-	var/mob/living/user = owner
+/datum/action/bloodsucker/cloak/ActivatePower(mob/living/user = owner)
+	was_running = (user.m_intent == MOVE_INTENT_RUN)
+	if(was_running)
+		user.toggle_move_intent()
+	user.AddElement(/datum/element/digitalcamo)
+	. = ..()
 
-	moveintent_was_run = (user.m_intent == MOVE_INTENT_RUN)
-
-	while(bloodsuckerdatum && ContinueActive(user))
-		// Pay Blood Toll (if awake)
-		owner.alpha = max(35, owner.alpha - min(75, 10 + 5 * level_current))
+/datum/action/bloodsucker/cloak/UsePower(mob/living/user)
+	// Checks that we can keep using this.
+	if(!..())
+		return
+	var/datum/antagonist/bloodsucker/bloodsuckerdatum = IS_BLOODSUCKER(user)
+	// Pay Blood Toll (if awake)
+	owner.alpha = max(25, owner.alpha - min(75, 10 + 5 * level_current))
+	if(user.stat == CONSCIOUS)
 		bloodsuckerdatum.AddBloodVolume(-0.2)
+	// Prevents running while on Cloak of Darkness
+	if(user.m_intent != MOVE_INTENT_WALK)
+		user.toggle_move_intent()
+		to_chat(user, span_warning("You attempt to run, crushing yourself in the process."))
+		user.adjustBruteLoss(rand(5,15))
 
-		runintent = (user.m_intent == MOVE_INTENT_RUN)
-		var/turf/T = get_turf(user)
-		lum = T.get_lumcount()
-
-		if(istype(owner.loc))
-			if(lum > walk_threshold)
-				if(runintent)
-					user.toggle_move_intent()
-					ADD_TRAIT(user, TRAIT_NORUNNING, BLOODSUCKER_TRAIT)
-
-			if(lum < walk_threshold)
-				if(!runintent)
-					user.toggle_move_intent()
-					REMOVE_TRAIT(user, TRAIT_NORUNNING, BLOODSUCKER_TRAIT)
-
-		sleep(5) // Check every few ticks
+	addtimer(CALLBACK(src, .proc/UsePower, user), 0.5 SECONDS)
 
 /datum/action/bloodsucker/cloak/ContinueActive(mob/living/user, mob/living/target)
-	if (!..())
+	if(!..())
 		return FALSE
-	if(user.stat == !CONSCIOUS) // Must be CONSCIOUS
-		to_chat(owner, "<span class='warning'>Your cloak failed due to you falling unconcious! </span>")
+	/// Must be CONSCIOUS
+	if(user.stat != CONSCIOUS)
+		to_chat(owner, span_warning("Your cloak failed due to you falling unconcious!"))
 		return FALSE
 	return TRUE
 
 /datum/action/bloodsucker/cloak/DeactivatePower(mob/living/user = owner, mob/living/target)
-	..()
-	REMOVE_TRAIT(user, TRAIT_NORUNNING, BLOODSUCKER_TRAIT)
+	. = ..()
 	user.alpha = 255
-
-	runintent = (user.m_intent == MOVE_INTENT_RUN)
-
-	if(!runintent && moveintent_was_run)
+	user.RemoveElement(/datum/element/digitalcamo)
+	if(was_running && user.m_intent == MOVE_INTENT_WALK)
 		user.toggle_move_intent()

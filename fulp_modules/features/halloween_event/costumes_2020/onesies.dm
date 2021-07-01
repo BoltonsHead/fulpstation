@@ -61,10 +61,10 @@
 		if(ishuman(src.loc))
 			var/mob/living/carbon/human/H = src.loc
 			if(H.wear_suit != src)
-				to_chat(H, "<span class='warning'>You must be wearing [src] to put up the hood!</span>")
+				to_chat(H, span_warning("You must be wearing [src] to put up the hood!"))
 				return
 			if(H.head)
-				to_chat(H, "<span class='warning'>You're already wearing something on your head!</span>")
+				to_chat(H, span_warning("You're already wearing something on your head!"))
 				return
 			else if(H.equip_to_slot_if_possible(hood,ITEM_SLOT_HEAD,0,0,1))
 				suittoggled = TRUE
@@ -302,7 +302,7 @@
 
 		if("lizard")
 			new /obj/item/clothing/suit/hooded/onesie/lizard(src)
-			new	/obj/item/toy/plush/lizardplushie(src)
+			new	/obj/item/toy/plush/lizard_plushie(src)
 
 		if("moth")
 			new /obj/item/clothing/suit/hooded/onesie/moth(src)
@@ -354,7 +354,7 @@
 
 /obj/item/storage/box/halloween/edition_20/onesie/lizard/PopulateContents()
 	new /obj/item/clothing/suit/hooded/onesie/lizard(src)
-	new	/obj/item/toy/plush/lizardplushie(src)
+	new	/obj/item/toy/plush/lizard_plushie(src)
 
 /obj/item/storage/box/halloween/edition_20/onesie/moth
 	theme_name = "2020's Onesie - Moth"

@@ -1,13 +1,13 @@
 /datum/action/bloodsucker/targeted/brawn
 	name = "Brawn"
-	desc = "Snap restraints with ease, or deal terrible damage with your bare hands."
+	desc = "Snap restraints, break lockers and doors, or deal terrible damage with your bare hands."
 	button_icon_state = "power_strength"
 	bloodcost = 8
 	cooldown = 90
 	target_range = 1
 	power_activates_immediately = TRUE
 	must_be_capacitated = TRUE
-	can_be_immobilized = TRUE
+	can_use_w_immobilize = TRUE
 	bloodsucker_can_buy = TRUE
 	// Level Up
 	var/upgrade_canLocker = FALSE
@@ -15,7 +15,7 @@
 
 /datum/action/bloodsucker/targeted/brawn/CheckCanUse(display_error)
 	. = ..()
-	if(!..(display_error)) // DEFAULT CHECKS
+	if(!.) // DEFAULT CHECKS
 		return FALSE
 	var/usedPower = TRUE // Break Out of Restraints! (And then cancel)
 	if(CheckBreakRestraints())
@@ -35,43 +35,49 @@
 /// NOTE: Just like biodegrade.dm, we only remove one thing per use
 /datum/action/bloodsucker/targeted/brawn/proc/CheckBreakRestraints()
 	var/mob/living/carbon/human/user = owner
-	var/used = FALSE // Only one form of shackles removed per use
-	if(user.handcuffed) // Removes Handcuffs
+	/// Only one form of shackles removed per use
+	var/used = FALSE
+	/// Removes Handcuffs
+	if(user.handcuffed)
 		var/obj/O = user.get_item_by_slot(ITEM_SLOT_HANDCUFFED)
 		if(!istype(O))
 			return FALSE
-		user.visible_message("<span class='warning'>[user] breaks through the [user.p_their()] [O] like it's nothing!</span>", \
-			"<span class='warning'>We break through our handcuffs!</span>")
+		user.visible_message(span_warning("[user] breaks through the [user.p_their()] [O] like it's nothing!"), \
+			span_warning("We break through our handcuffs!"))
 		user.clear_cuffs(O,TRUE)
 		playsound(get_turf(user), 'sound/effects/grillehit.ogg', 80, 1, -1)
 		used = TRUE
-	else if(user.legcuffed) // Removes Legcuffs
+	/// Removes Legcuffs
+	else if(user.legcuffed)
 		var/obj/O = user.get_item_by_slot(ITEM_SLOT_LEGCUFFED)
 		if(!istype(O))
 			return FALSE
-		user.visible_message("<span class='warning'>[user] kicks away the [user.p_their()] [O] like it's nothing!</span>", \
-			"<span class='warning'>We discard our legcuffs!</span>")
+		user.visible_message(span_warning("[user] kicks away the [user.p_their()] [O] like it's nothing!"), \
+			span_warning("We discard our legcuffs!"))
 		user.clear_cuffs(O,TRUE)
 		playsound(get_turf(user), 'sound/effects/grillehit.ogg', 80, 1, -1)
 		used = TRUE
-	else if(user.wear_suit && user.wear_suit.breakouttime && !used) // Removes straightjacket
+	/// Removes straightjacket
+	else if(user.wear_suit && user.wear_suit.breakouttime && !used)
 		var/obj/item/clothing/suit/S = user.get_item_by_slot(ITEM_SLOT_OCLOTHING)
 		if(!istype(S))
 			return FALSE
-		user.visible_message("<span class='warning'>[user] rips straight through the [user.p_their()] [S]!</span>", \
-			"<span class='warning'>We tear through our straightjacket!</span>")
+		user.visible_message(span_warning("[user] rips straight through the [user.p_their()] [S]!"), \
+			span_warning("We tear through our straightjacket!"))
 		addtimer(CALLBACK(src, .proc/rip_straightjacket, user, S), 1)
 		playsound(get_turf(user), 'sound/effects/grillehit.ogg', 80, 1, -1)
 		used = TRUE
-	else if(istype(user.loc, /obj/structure/closet) && !used) // Breaks out of lockers
+	/// Breaks out of lockers
+	else if(istype(user.loc, /obj/structure/closet) && !used)
 		var/obj/structure/closet/C = user.loc
 		if(!istype(C))
 			return FALSE
-		C.visible_message("<span class='warning'>[C] tears apart as [user] bashes the locker open from within!</span>")
-		to_chat(user, "<span class='warning'>We bash [C] wide open!</span>")
+		C.visible_message(span_warning("[C] tears apart as [user] bashes it open from within!"))
+		to_chat(user, span_warning("We bash [C] wide open!"))
 		addtimer(CALLBACK(src, .proc/break_closet, user, C), 1)
 		playsound(get_turf(user), 'sound/effects/grillehit.ogg', 80, 1, -1)
 		used = TRUE
+	/// Did we end up using our ability?
 	return used
 
 /datum/action/bloodsucker/targeted/brawn/proc/rip_straightjacket(mob/living/carbon/human/user, obj/S)
@@ -79,7 +85,7 @@
 		qdel(S)
 
 /datum/action/bloodsucker/targeted/brawn/proc/break_closet(mob/living/carbon/human/user, obj/structure/closet/C)
-	if(C && user.loc == C)
+	if(C)
 		C.welded = FALSE
 		C.locked = FALSE
 		C.broken = TRUE
@@ -102,8 +108,8 @@
 	M.throw_at(T, pull_power, TRUE, owner, FALSE) // Throw distance based on grab state! Harder grabs punished more aggressively.
 	// /proc/log_combat(atom/user, atom/target, what_done, atom/object=null, addition=null)
 	log_combat(owner, M, "used Brawn power")
-	owner.visible_message("<span class='warning'>[owner] tears free of [M]'s grasp!</span>", \
-			 			"<span class='warning'>You shrug off [M]'s grasp!</span>")
+	owner.visible_message(span_warning("[owner] tears free of [M]'s grasp!"), \
+			 			span_warning("You shrug off [M]'s grasp!"))
 	owner.pulledby = null // It's already done, but JUST IN CASE.
 	return TRUE
 
@@ -118,8 +124,8 @@
 		// Knockdown!
 		var/powerlevel = min(5, 1 + level_current)
 		if(rand(5 + powerlevel) >= 5)
-			target.visible_message("<span class='danger'>[user] lands a vicious punch, sending [target] away!</span>", \
-							  "<span class='userdanger'>[user] has landed a horrifying punch on you, sending you flying!</span>", null, COMBAT_MESSAGE_RANGE)
+			target.visible_message(span_danger("[user] lands a vicious punch, sending [target] away!"), \
+							  span_userdanger("[user] has landed a horrifying punch on you, sending you flying!"), null, COMBAT_MESSAGE_RANGE)
 			target.Knockdown(min(5, rand(10, 10 * powerlevel)))
 		// Attack!
 		playsound(get_turf(target), 'sound/weapons/punch4.ogg', 60, 1, -1)
@@ -136,16 +142,33 @@
 			target.emp_act(EMP_HEAVY)
 	// Target Type: Door
 	else if(istype(target, /obj/machinery/door))
-		var/obj/machinery/door/D = target
-		playsound(get_turf(usr), 'sound/machines/airlock_alien_prying.ogg', 40, 1, -1)
-		to_chat(user, "<span class='notice'>You prepare to tear open [D].</span>")
-		if(do_mob(usr, target, 2.5 SECONDS))
-			if(D.Adjacent(user))
-				to_chat(user, "<span class='notice'>You tear open the [D].</span>")
-				user.Stun(10)
-				user.do_attack_animation(D, ATTACK_EFFECT_SMASH)
-				playsound(get_turf(D), 'sound/effects/bang.ogg', 30, 1, -1)
-				D.open(2) // open(2) is like a crowbar or jaws of life.
+		if(level_current >= 3)
+			var/obj/machinery/door/D = target
+			playsound(get_turf(usr), 'sound/machines/airlock_alien_prying.ogg', 40, 1, -1)
+			to_chat(user, span_notice("You prepare to tear open [D]."))
+			if(do_mob(usr, target, 2.5 SECONDS))
+				if(D.Adjacent(user))
+					to_chat(user, span_notice("You tear open the [D]."))
+					user.Stun(10)
+					user.do_attack_animation(D, ATTACK_EFFECT_SMASH)
+					playsound(get_turf(D), 'sound/effects/bang.ogg', 30, 1, -1)
+					D.open(2) // open(2) is like a crowbar or jaws of life.
+		else
+			to_chat(user, span_notice("You are not strong enough to pry this open."))
+			return FALSE
+	// Target Type: Locker
+	else if(istype(target, /obj/structure/closet))
+		if(level_current >= 2)
+			var/obj/structure/closet/C = target
+			to_chat(user, span_notice("You prepare to break [C] open."))
+			if(do_mob(usr, target, 2.5 SECONDS))
+				C.visible_message(span_warning("[C] breaks open as [user] bashes the locker!"))
+				to_chat(user, span_warning("We bash [C] wide open!"))
+				addtimer(CALLBACK(src, .proc/break_closet, user, C), 1)
+				playsound(get_turf(user), 'sound/effects/grillehit.ogg', 80, 1, -1)
+		else
+			to_chat(user, span_notice("You are not strong enough to break this open."))
+			return FALSE
 
 /datum/action/bloodsucker/targeted/brawn/CheckValidTarget(atom/A)
 	return isliving(A) || istype(A, /obj/machinery/door) || istype(A, /obj/structure/closet)
@@ -166,4 +189,14 @@
 	// Target Type: Door
 	else if(istype(A, /obj/machinery/door))
 		return TRUE
+	// Target Type: Locker
+	else if(istype(A, /obj/structure/closet))
+		return TRUE
 	return ..() // yes, FALSE! You failed if you got here! BAD TARGET
+
+/// Vassal version
+/datum/action/bloodsucker/targeted/brawn/vassal
+	name = "Strength"
+	desc = "Snap restraints, break lockers and doors, or deal terrible damage with your bare hands."
+	bloodsucker_can_buy = FALSE
+	vassal_can_buy = TRUE
